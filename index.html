@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>45 Minutes - Music Player</title>
+    <meta name="description" content="Listen to '45 Minutes' with synchronized lyrics display">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#4f46e5",
+                        secondary: "#7c3aed",
+                        accent: "#f59e0b",
+                        dark: "#1e293b",
+                        light: "#f8fafc"
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'system-ui', 'sans-serif'],
+                        'serif': ['Playfair Display', 'serif']
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .lyrics-line {
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+        
+        .lyrics-line.active {
+            opacity: 1;
+            transform: scale(1.05);
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.1s linear;
+        }
+        
+        .music-note {
+            animation: float 3s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 0.2s);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg font-sans text-white">
+    <!-- Animated background elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-10 left-10 music-note" style="--i: 1">♪</div>
+        <div class="absolute top-20 right-20 music-note" style="--i: 2">♫</div>
+        <div class="absolute bottom-20 left-1/4 music-note" style="--i: 3">♬</div>
+        <div class="absolute bottom-10 right-1/3 music-note" style="--i: 4">♪</div>
+        <div class="absolute top-1/3 left-1/3 music-note" style="--i: 5">♫</div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl md:text-6xl font-serif font-bold mb-4 animate-pulse-slow">45 Minutes</h1>
+            <p class="text-xl opacity-90">Interactive Music Player with Synchronized Lyrics</p>
+        </header>
+
+        <main class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Music Player Section -->
+                <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+                    <div class="text-center mb-8">
+                        <div class="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+                            <img 
+                                src="https://picsum.photos/400?random=45" 
+                                alt="Album cover for 45 Minutes" 
+                                class="w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                        </div>
+                        <h2 class="text-3xl font-bold mb-2">Now Playing</h2>
+                        <p class="text-lg opacity-90">"45 Minutes"</p>
+                    </div>
+
+                    <!-- Audio Player -->
+                    <div class="mb-8">
+                        <audio id="audioPlayer" preload="metadata">
+                            <source src="song.mp3" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+
+                        <!-- Progress Bar -->
+                        <div class="mb-6">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span id="currentTime">0:00</span>
+                                <span id="duration">0:00</span>
+                            </div>
+                            <div class="progress-bar bg-white/20">
+                                <div id="progressFill" class="progress-fill bg-accent"></div>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex justify-center items-center space-x-8">
+                            <button id="rewindBtn" class="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                                <i class="fas fa-backward text-2xl"></i>
+                            </button>
+                            
+                            <button id="playBtn" class="p-5 rounded-full bg-primary hover:bg-purple-700 transition-all transform hover:scale-105">
+                                <i class="fas fa-play text-3xl"></i>
+                            </button>
+                            
+                            <button id="pauseBtn" class="p-5 rounded-full bg-secondary hover:bg-purple-800 transition-all transform hover:scale-105 hidden">
+                                <i class="fas fa-pause text-3xl"></i>
+                            </button>
+                            
+                            <button id="forwardBtn" class="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                                <i class="fas fa-forward text-2xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Volume Control -->
+                        <div class="mt-8">
+                            <div class="flex items-center space-x-4">
+                                <i class="fas fa-volume-down"></i>
+                                <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.7" 
+                                       class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white">
+                                <i class="fas fa-volume-up"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="text-center opacity-90">
+                        <p class="mb-2"><i class="fas fa-music mr-2"></i>Single Track</p>
+                        <p><i class="fas fa-clock mr-2"></i>Duration: ~3 minutes</p>
+                    </div>
+                </div>
+
+                <!-- Lyrics Section -->
+                <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold mb-4">Lyrics</h2>
+                        <div class="inline-flex items-center space-x-2 px-4 py-2 bg-white/10 rounded-full">
+                            <i class="fas fa-sync-alt animate-spin"></i>
+                            <span>Synchronized with music</span>
+                        </div>
+                    </div>
+
+                    <!-- Lyrics Container -->
+                    <div id="lyricsContainer" class="h-[500px] overflow-y-auto pr-4 space-y-4">
+                        <!-- Lyrics will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Lyrics Controls -->
+                    <div class="mt-8 flex justify-center space-x-4">
+                        <button id="autoScrollBtn" class="px-6 py-2 bg-primary rounded-full hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-arrows-alt-v mr-2"></i>Auto Scroll
+                        </button>
+                        <button id="highlightBtn" class="px-6 py-2 bg-secondary rounded-full hover:bg-purple-800 transition-colors">
+                            <i class="fas fa-highlighter mr-2"></i>Highlight Current
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Song Info -->
+            <div class="glass-effect rounded-2xl p-8 mt-8 shadow-2xl">
+                <h3 class="text-2xl font-bold mb-6 text-center">About This Song</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center p-4 bg-white/5 rounded-xl">
+                        <i class="fas fa-heart text-3xl text-red-400 mb-3"></i>
+                        <h4 class="font-bold mb-2">Romantic Theme</h4>
+                        <p class="text-sm opacity-90">A song about love and meaningful moments</p>
+                    </div>
+                    <div class="text-center p-4 bg-white/5 rounded-xl">
+                        <i class="fas fa-clock text-3xl text-accent mb-3"></i>
+                        <h4 class="font-bold mb-2">Time Reflection</h4>
+                        <p class="text-sm opacity-90">Contemplating what to do with limited time</p>
+                    </div>
+                    <div class="text-center p-4 bg-white/5 rounded-xl">
+                        <i class="fas fa-guitar text-3xl text-green-400 mb-3"></i>
+                        <h4 class="font-bold mb-2">Acoustic Vibe</h4>
+                        <p class="text-sm opacity-90">Gentle melody with heartfelt lyrics</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center opacity-80">
+            <p class="mb-4">Made with <i class="fas fa-heart text-red-400"></i> for music lovers</p>
+            <div class="flex justify-center space-x-6">
+                <a href="#" class="hover:text-accent transition-colors"><i class="fab fa-spotify text-2xl"></i></a>
+                <a href="#" class="hover:text-accent transition-colors"><i class="fab fa-apple text-2xl"></i></a>
+                <a href="#" class="hover:text-accent transition-colors"><i class="fab fa-youtube text-2xl"></i></a>
+                <a href="#" class="hover:text-accent transition-colors"><i class="fab fa-soundcloud text-2xl"></i></a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Define lyrics data with timestamps
+        const lyricsData = [
+            { "time": 0, "text": "..." },
+            { "time": 13, "text": "What would I do if I had forty-five minutes?" },
+            { "time": 19, "text": "Would I write a song?" },
+            { "time": 22, "text": "No, I don't think so" },
+            { "time": 26, "text": "What would I do if I had seventy seconds?" },
+            { "time": 31, "text": "Would I get a drink or two?" },
+            { "time": 34, "text": "No, I don't think so" },
+            { "time": 38, "text": "I'd rather get on a bus" },
+            { "time": 41, "text": "Find you where you are" },
+            { "time": 44, "text": "Tell you about that cloud that looked just like a kangaroo" },
+            { "time": 50, "text": "And the old man on the street" },
+            { "time": 53, "text": "Who sat there with his dog" },
+            { "time": 56, "text": "Ask you if you'd like to live that way with me too" },
+            { "time": 62, "text": "00000" },
+            { "time": 65, "text": "00000" },
+            { "time": 68, "text": "Would you like that?" },
+            { "time": 71, "text": "Would you like that?" },
+            { "time": 87, "text": "What would I do if I could fly up on a roof?" },
+            { "time": 93, "text": "Would I rob a bank?" },
+            { "time": 96, "text": "No, I don't think so" },
+            { "time": 99, "text": "What would I do if I could turn invisible?" },
+            { "time": 105, "text": "Would I take my favorite car?" },
+            { "time": 108, "text": "No, I don't think so" },
+            { "time": 111, "text": "I'd go to that restaurant" },
+            { "time": 115, "text": "Steal all their fortune cookies" },
+            { "time": 118, "text": "Read them one by one till it says I could be with you" },
+            { "time": 124, "text": "Sneak into the flower shop" },
+            { "time": 127, "text": "Watch how they make their bouquets" },
+            { "time": 130, "text": "So I can finally use the flowers I planted for just for you" },
+            { "time": 136, "text": "00000" },
+            { "time": 139, "text": "00000" },
+            { "time": 141, "text": "Would you like that?" },
+            { "time": 144, "text": "Would you like that?" },
+            { "time": 148, "text": "00000" },
+            { "time": 151, "text": "00000" },
+            { "time": 154, "text": "Would you like that?" },
+            { "time": 157, "text": "Would you like that?" },
+            { "time": 160, "text": "HHHH" },
+            { "time": 163, "text": "00000" },
+            { "time": 167, "text": "Would you like that?" },
+            { "time": 169, "text": "Would you like that?" }
+        ];
+
+        // DOM Elements
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
+        const volumeControl = document.getElementById('volumeControl');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const autoScrollBtn = document.getElementById('autoScrollBtn');
+        const highlightBtn = document.getElementById('highlightBtn');
+
+        // State variables
+        let isPlaying = false;
+        let autoScrollEnabled = true;
+        let highlightEnabled = true;
+        let currentLyricIndex = 0;
+
+        // Format time in MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // Initialize lyrics display
+        function initializeLyrics() {
+            lyricsContainer.innerHTML = '';
+            lyricsData.forEach((lyric, index) => {
+                const lyricElement = document.createElement('div');
+                lyricElement.className = 'lyrics-line p-3 rounded-lg transition-all duration-300';
+                lyricElement.innerHTML = `
+                    <div class="flex items-start">
+                        <span class="text-accent font-mono text-sm w-16 flex-shrink-0 mt-1">${formatTime(lyric.time)}</span>
+                        <span class="text-lg">${lyric.text}</span>
+                    </div>
+                `;
+                lyricElement.dataset.time = lyric.time;
+                lyricElement.dataset.index = index;
+                lyricsContainer.appendChild(lyricElement);
+            });
+        }
+
+        // Update current lyric based on playback time
+        function updateCurrentLyric(currentTime) {
+            if (!highlightEnabled) return;
+            
+            // Find the current lyric based on time
+            let newIndex = 0;
+            for (let i = lyricsData.length - 1; i >= 0; i--) {
+                if (currentTime >= lyricsData[i].time) {
+                    newIndex = i;
+                    break;
+                }
+            }
+            
+            // Update active state
+            if (newIndex !== currentLyricIndex) {
+                // Remove active class from previous lyric
+                const prevLyric = lyricsContainer.querySelector(`[data-index="${currentLyricIndex}"]`);
+                if (prevLyric) {
+                    prevLyric.classList.remove('active', 'bg-white/20');
+                }
+                
+                // Add active class to current lyric
+                const currentLyric = lyricsContainer.querySelector(`[data-index="${newIndex}"]`);
+                if (currentLyric) {
+                    currentLyric.classList.add('active', 'bg-white/20');
+                    
+                    // Auto scroll to current lyric
+                    if (autoScrollEnabled) {
+                        currentLyric.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                }
+                
+                currentLyricIndex = newIndex;
+            }
+        }
+
+        // Update progress bar and time display
+        function updateProgress() {
+            if (!audioPlayer.duration) return;
+            
+            const currentTime = audioPlayer.currentTime;
+            const duration = audioPlayer.duration;
+            const progressPercent = (currentTime / duration) * 100;
+            
+            progressFill.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(currentTime);
+            durationEl.textContent = formatTime(duration);
+            
+            updateCurrentLyric(currentTime);
+        }
+
+        // Play/pause functionality
+        function togglePlayPause() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                playBtn.classList.remove('hidden');
+                pauseBtn.classList.add('hidden');
+            } else {
+                audioPlayer.play();
+                playBtn.classList.add('hidden');
+                pauseBtn.classList.remove('hidden');
+            }
+            isPlaying = !isPlaying;
+        }
+
+        // Seek functionality
+        function seekToPosition(e) {
+            if (!audioPlayer.duration) return;
+            
+            const progressBar = e.currentTarget;
+            const clickPosition = e.offsetX;
+            const progressBarWidth = progressBar.clientWidth;
+            const seekTime = (clickPosition / progressBarWidth) * audioPlayer.duration;
+            
+            audioPlayer.currentTime = seekTime;
+        }
+
+        // Rewind 10 seconds
+        function rewind() {
+            audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 10);
+        }
+
+        // Forward 10 seconds
+        function forward() {
+            audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 10);
+        }
+
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Play/Pause buttons
+            playBtn.addEventListener('click', togglePlayPause);
+            pauseBtn.addEventListener('click', togglePlayPause);
+            
+            // Rewind/Forward buttons
+            rewindBtn.addEventListener('click', rewind);
+            forwardBtn.addEventListener('click', forward);
+            
+            // Volume control
+            volumeControl.addEventListener('input', (e) => {
+                audioPlayer.volume = e.target.value;
+            });
+            
+            // Progress bar click
+            progressFill.parentElement.addEventListener('click', seekToPosition);
+            
+            // Time update
+            audioPlayer.addEventListener('timeupdate', updateProgress);
+            
+            // Audio loaded
+            audioPlayer.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audioPlayer.duration);
+            });
+            
+            // Auto scroll toggle
+            autoScrollBtn.addEventListener('click', () => {
+                autoScrollEnabled = !autoScrollEnabled;
+                autoScrollBtn.classList.toggle('bg-primary');
+                autoScrollBtn.classList.toggle('bg-gray-600');
+                autoScrollBtn.innerHTML = autoScrollEnabled ? 
+                    '<i class="fas fa-arrows-alt-v mr-2"></i>Auto Scroll' : 
+                    '<i class="fas fa-ban mr-2"></i>Scroll Off';
+            });
+            
+            // Highlight toggle
+            highlightBtn.addEventListener('click', () => {
+                highlightEnabled = !highlightEnabled;
+                highlightBtn.classList.toggle('bg-secondary');
+                highlightBtn.classList.toggle('bg-gray-600');
+                highlightBtn.innerHTML = highlightEnabled ? 
+                    '<i class="fas fa-highlighter mr-2"></i>Highlight Current' : 
+                    '<i class="fas fa-eye-slash mr-2"></i>Highlight Off';
+                
+                if (!highlightEnabled) {
+                    // Remove all active classes
+                    const activeLyrics = lyricsContainer.querySelectorAll('.active');
+                    activeLyrics.forEach(lyric => {
+                        lyric.classList.remove('active', 'bg-white/20');
+                    });
+                }
+            });
+            
+            // Click on lyrics to seek
+            lyricsContainer.addEventListener('click', (e) => {
+                const lyricElement = e.target.closest('.lyrics-line');
+                if (lyricElement && lyricElement.dataset.time) {
+                    audioPlayer.currentTime = parseInt(lyricElement.dataset.time);
+                    if (!isPlaying) {
+                        togglePlayPause();
+                    }
+                }
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        togglePlayPause();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        rewind();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        forward();
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        audioPlayer.muted = !audioPlayer.muted;
+                        break;
+                }
+            });
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLyrics();
+            initializeEventListeners();
+            
+            // Set initial volume
+            audioPlayer.volume = volumeControl.value;
+            
+            // Add some visual effects
+            const notes = document.querySelectorAll('.music-note');
+            notes.forEach((note, index) => {
+                note.style.animationDelay = `${index * 0.5}s`;
+            });
+        });
+
+        // Prevent default anchor behavior
+        document.querySelectorAll('a').forEach(anchor => {
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                // You can add custom navigation logic here if needed
+                console.log("Navigation prevented for:", anchor.href);
+            });
+        });
+    </script>
+</body>
+</html>
